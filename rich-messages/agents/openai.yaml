@@ -1,0 +1,4 @@
+interface:
+  display_name: "Rich Messages"
+  short_description: "Telegram rich formatting guide — buttons, markdown, polls."
+  default_prompt: "Use rich-messages for Telegram rich formatting guide — buttons, markdown, polls."

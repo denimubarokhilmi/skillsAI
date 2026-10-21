@@ -1,0 +1,107 @@
+const e = require('../../_shared/docx-engine');
+const { ImageRun, Paragraph, AlignmentType } = require('docx');
+const fs = require('fs');
+const path = require('path');
+
+const TODAY = '29 Juni 2026';
+const AUTHOR = 'Tim Dokumentasi Website Desa Sitiwinangun';
+const ORG = 'Program TPLM – Universitas Telkom';
+const OUT = path.join(__dirname, '..', 'output');
+const SHOTS = 'C:/Users/LEGION/Documents/Codex/2026-06-27/bu/outputs/screenshots_manual_validation';
+const W = e.DXA.CONTENT_W;
+if (!fs.existsSync(OUT)) fs.mkdirSync(OUT, { recursive: true });
+
+function meta(title, role) { return { title, subtitle:'Website Desa Sitiwinangun', role, version:'1.0', date:TODAY, author:AUTHOR, organization:ORG, filename:title.replace(/[^a-zA-Z0-9_]/g,'_') }; }
+function rev() { return [{ version:'1.0', date:TODAY, author:AUTHOR, description:'Final berdasarkan validasi UI dan screenshot Playwright' }]; }
+function tbl(headers, rows, defs, cap) { return [e.tbl({ headers, rows, columnDefs:defs }), ...(cap?[e.tblCaption(cap)]:[])]; }
+function proc(rows, cap) { return tbl(['No','Aksi Pengguna','Hasil Sistem'], rows.map((r,i)=>[String(i+1), r[0], r[1]]), [{w:600,align:'center'},{w:4200,align:'left'},{w:W-4800,align:'left'}], cap); }
+function pngSize(file){ const b=fs.readFileSync(file); return {width:b.readUInt32BE(16), height:b.readUInt32BE(20)}; }
+function shot(title, file){
+  if(!file) return [];
+  const full=path.join(SHOTS,file);
+  const blocks=[];
+  if(!fs.existsSync(full)) return [e.p('Screenshot tidak ditemukan: '+full), e.figCaption(title)];
+  const s=pngSize(full); let width=500, height=Math.round(width/(s.width/s.height));
+  if(height>650){height=650;width=Math.round(height*(s.width/s.height));}
+  blocks.push(new Paragraph({alignment:AlignmentType.CENTER,children:[new ImageRun({data:fs.readFileSync(full),transformation:{width,height},type:'png'})]}));
+  blocks.push(e.figCaption(title));
+  return blocks;
+}
+function front(m){ return [...e.cover(m), ...e.revisionHistory(rev()), ...e.tocSection(), e.br()]; }
+function conventions(){ return [e.h(0,'Konvensi Dokumen'), ...tbl(['Format / Simbol','Arti'], [['Teks tebal','Nama menu/tombol/field UI'],['Monospace','URL/path/file'],['CATATAN','Informasi tambahan'],['PERINGATAN','Tindakan perlu hati-hati']], [{w:3000,align:'left'},{w:W-3000,align:'left'}], 'Konvensi Penulisan')]; }
+function requirements(rows){ return [e.h(0,'Persyaratan Sistem'), ...tbl(['Komponen','Kebutuhan'], rows, [{w:3000,align:'left'},{w:W-3000,align:'left'}], 'Persyaratan Sistem')]; }
+function renderTasks(b,tasks){ for(const t of tasks){ b.push(e.h(1,t.title), e.p(t.desc), ...proc(t.steps,t.title), ...shot(t.title,t.screenshot)); if(t.note) b.push(e.p('CATATAN: '+t.note)); } }
+function finishCommon(b, type){ b.push(e.h(0,'Troubleshooting'), ...tbl(['Masalah','Penyebab','Solusi'], type.trouble, [{w:2800,align:'left'},{w:2800,align:'left'},{w:W-5600,align:'left'}], 'Troubleshooting')); b.push(e.h(0,'Glosarium'), ...tbl(['Istilah','Definisi'], type.glossary, [{w:2500,align:'left'},{w:W-2500,align:'left'}], 'Glosarium')); b.push(e.h(0,'FAQ'), ...tbl(['Pertanyaan','Jawaban'], type.faq, [{w:3500,align:'left'},{w:W-3500,align:'left'}], 'FAQ')); }
+
+function admin(){
+ const m=meta('User Manual Administrator','Administrator'); const b=front(m);
+ b.push(e.h(0,'Pendahuluan'), e.p('Panduan resmi administrator untuk mengelola konten Website Desa Sitiwinangun. Manual mengikuti hasil validasi UI aktual: nama menu aktual, field form aktual, dan tombol login Masuk ke Dashboard.'), e.p('Sejarah Gerabah, Proses Produksi, Virtual Tour CRUD, dan Inventory/Arsip tidak dijadikan prosedur karena keluar dari scope panel admin final.'));
+ b.push(...conventions(), ...requirements([['Browser','Chrome/Edge/Firefox/Safari terbaru'],['Akun','Akun administrator aktif'],['Layar','Laptop/desktop disarankan']]));
+ b.push(e.h(0,'Ringkasan Menu Admin'), ...tbl(['Menu','Fungsi'], [['Dashboard','Kartu statistik konten'],['Koleksi Kriya','Kelola koleksi gerabah/pola'],['Kisah Pengrajin','Kelola pengrajin'],['Profil Desa','Ubah profil desa'],['Jelajah Desa','Kelola lokasi'],['Info Pengurus','Kelola pengurus'],['Kisah Kriya','Kelola narasi storytelling'],['Pengaturan','Profil/password admin']], [{w:2500,align:'left'},{w:W-2500,align:'left'}], 'Menu Sidebar Aktual'));
+ b.push(e.h(0,'Panduan Operasional Admin'));
+ renderTasks(b,[
+  {title:'Masuk ke Dashboard',desc:'Login ke panel admin.',screenshot:'admin_01_login.png',steps:[['Buka /admin/login.','Form email/password tampil.'],['Isi email admin.','Field email terisi.'],['Isi password admin.','Field password terisi.'],['Klik Masuk ke Dashboard.','Dashboard admin terbuka.']]},
+  {title:'Melihat Dashboard',desc:'Memantau ringkasan sistem.',screenshot:'admin_02_dashboard.png',steps:[['Login berhasil.','Dashboard tampil.'],['Periksa kartu statistik.','Koleksi Kriya, Arsip Barang, Kisah Pengrajin, Konten Statis tampil.']]},
+  {title:'Melihat Daftar Koleksi Kriya',desc:'Mencari dan melihat koleksi.',screenshot:'admin_03_collections_index.png',steps:[['Klik Koleksi Kriya.','Daftar koleksi tampil.'],['Gunakan search/filter.','Data difilter.'],['Klik Tambah Koleksi.','Form tambah terbuka.']]},
+  {title:'Menambah Koleksi Kriya',desc:'Membuat data koleksi gerabah atau pola motif.',screenshot:'admin_04_collections_create.png',steps:[['Pilih Tipe Galeri.','Koleksi Gerabah/Pola Motif terpilih.'],['Isi Nama Motif/Objek dan URL Slug.','Identitas koleksi terisi.'],['Pilih Kategori Kriya, Tahun, Status Publikasi.','Metadata terisi.'],['Isi Deskripsi Singkat, Sejarah & Asal-usul, Makna Filosofis, Teknik Produksi, Bahan Pembuatan.','Narasi koleksi terisi.'],['Upload Gambar.','File gambar terpilih.'],['Pilih Pengrajin Pembuat dan isi Lokasi Pembuatan.','Relasi pengrajin/lokasi terisi.'],['Klik Simpan.','Data disimpan; jika automation gagal, lakukan submit manual.']]},
+  {title:'Mengubah Koleksi Kriya',desc:'Mengedit data koleksi existing.',screenshot:'admin_05_collections_edit.png',steps:[['Klik Edit pada koleksi.','Form edit berisi data lama.'],['Ubah field yang diperlukan.','Data diperbarui di form.'],['Gunakan Ganti Gambar jika perlu.','Gambar baru siap.'],['Klik Simpan.','Data koleksi diperbarui.']]},
+  {title:'Mengelola Kisah Pengrajin',desc:'Kelola data pengrajin.',screenshot:'admin_06_artisans_index.png',steps:[['Klik Kisah Pengrajin.','Daftar pengrajin tampil.'],['Klik Tambah Baru/Edit.','Form pengrajin tampil.'],['Isi nama, deskripsi, foto, kontak.','Data siap.'],['Klik Simpan.','Data tersimpan.']]},
+  {title:'Mengelola Profil Desa',desc:'Perbarui informasi desa.',screenshot:'admin_09_village_profile.png',steps:[['Klik Profil Desa.','Form profil tampil.'],['Ubah informasi desa.','Form berubah.'],['Klik Simpan.','Profil desa diperbarui.']]},
+  {title:'Mengelola Jelajah Desa',desc:'Kelola lokasi/rumah produksi.',screenshot:'admin_11_locations_index.png',steps:[['Klik Jelajah Desa.','Daftar lokasi tampil.'],['Klik Tambah/Edit.','Form lokasi tampil.'],['Isi detail lokasi.','Data siap.'],['Klik Simpan.','Lokasi tersimpan.']]},
+  {title:'Mengelola Info Pengurus',desc:'Kelola struktur pengurus.',screenshot:'admin_13_board_members_index.png',steps:[['Klik Info Pengurus.','Daftar pengurus tampil.'],['Klik Tambah/Edit.','Form pengurus tampil.'],['Isi nama, jabatan, foto.','Data siap.'],['Klik Simpan.','Pengurus tersimpan.']]},
+  {title:'Mengelola Kisah Kriya',desc:'Kelola narasi storytelling.',screenshot:'admin_15_storytelling.png',steps:[['Klik Kisah Kriya.','Editor narasi tampil.'],['Ubah Bab II sampai Bab V.','Narasi siap.'],['Klik Simpan Perubahan.','Storytelling publik diperbarui.']]},
+  {title:'Mengubah Pengaturan Admin',desc:'Ubah profil/password admin.',screenshot:'admin_18_settings.png',steps:[['Klik Pengaturan.','Form profil tampil.'],['Isi Nama Lengkap/Email atau password.','Data siap.'],['Klik Simpan Perubahan.','Pengaturan tersimpan.']]},
+ ]);
+ finishCommon(b,{trouble:[['Tidak bisa login','Email/password salah','Cek kredensial'],['Foto tidak muncul','Storage/path salah','Cek storage link dan file'],['Simpan gagal','Field wajib kosong','Lengkapi field *']],glossary:[['Dashboard','Halaman utama admin'],['Published','Status konten tampil publik'],['Draft','Status internal']],faq:[['Perlu coding?','Tidak.'],['Virtual Tour CRUD ada?','Tidak di panel admin final.']]});
+ return {m,body:b};
+}
+
+function story(){
+ const m=meta('User Manual Storytelling','Pengunjung'); const b=front(m);
+ b.push(e.h(0,'Pendahuluan'), e.p('Panduan menjelajahi konten publik Website Desa Sitiwinangun: beranda, galeri, pengrajin, storytelling, Jelajah Desa, Info Pengurus, footer, dan tampilan mobile.'));
+ b.push(...conventions(), ...requirements([['Browser','Chrome/Edge/Firefox/Safari terbaru'],['Perangkat','Laptop/tablet/HP'],['Koneksi','Internet stabil']]));
+ b.push(e.h(0,'Panduan Operasional Storytelling'));
+ renderTasks(b,[
+  {title:'Mengakses Beranda',desc:'Membuka halaman utama.',screenshot:'story_01_home.png',steps:[['Buka website.','Beranda tampil.'],['Scroll halaman.','Hero, koleksi, pengrajin, virtual tour, footer tampil.']]},
+  {title:'Mengakses Tentang Sitiwinangun',desc:'Membaca informasi desa.',screenshot:'story_02_tentang.png',steps:[['Klik Tentang > Tentang Sitiwinangun.','Halaman tentang tampil.'],['Baca profil desa.','Informasi terbaca.']]},
+  {title:'Melihat Galeri Produk',desc:'Melihat koleksi gerabah.',screenshot:'story_05_galeri.png',steps:[['Klik Galeri Produk.','Daftar koleksi tampil.'],['Gunakan filter/search.','Hasil difilter.'],['Klik koleksi.','Detail koleksi tampil.']]},
+  {title:'Melihat Pola Motif',desc:'Melihat tab pola motif.',screenshot:'story_05b_galeri_pola.png',steps:[['Buka Galeri Produk.','Galeri tampil.'],['Pilih tab Pola Motif.','Koleksi pola tampil.']]},
+  {title:'Membaca Detail Koleksi',desc:'Membaca informasi karya.',screenshot:'story_06_detail_koleksi.png',steps:[['Klik kartu koleksi.','Detail terbuka.'],['Baca deskripsi, sejarah, filosofi, teknik, bahan, pengrajin, tahun, lokasi.','Informasi lengkap terbaca.']]},
+  {title:'Melihat Daftar Pengrajin',desc:'Mengenal pengrajin.',screenshot:'story_07_pengrajin.png',steps:[['Klik Pengrajin.','Daftar pengrajin tampil.'],['Klik kartu pengrajin.','Detail pengrajin terbuka.']]},
+  {title:'Membaca Kisah Kriya',desc:'Membaca storytelling.',screenshot:'story_08_storytelling.png',steps:[['Klik Tentang > Kisah Kriya.','Halaman storytelling tampil.'],['Scroll tiap bab.','Narasi terbaca.']]},
+  {title:'Mengakses Jelajah Desa',desc:'Melihat lokasi rumah produksi.',screenshot:'story_09_jelajah.png',steps:[['Klik Tentang > Jelajah Desa.','Daftar lokasi tampil.'],['Baca produk utama, kapasitas, aktivitas edukasi.','Informasi lokasi terbaca.']]},
+  {title:'Mengakses Info Pengurus',desc:'Melihat struktur organisasi.',screenshot:'story_10_pengurus.png',steps:[['Klik Tentang > Info Pengurus.','Struktur pengurus tampil.'],['Baca jabatan, telepon, email.','Kontak pengurus terlihat.']]},
+  {title:'Menggunakan Tampilan Mobile',desc:'Navigasi pada HP.',screenshot:'story_11_mobile_home.png',steps:[['Buka website di layar kecil.','Layout mobile tampil.'],['Gunakan menu mobile.','Navigasi terbuka.']]},
+ ]);
+ finishCommon(b,{trouble:[['Dropdown tidak muncul','Mode mobile','Gunakan menu mobile'],['Gambar tidak tampil','Koneksi/file','Refresh'],['Halaman lambat','Cache','Refresh/incognito']],glossary:[['Dropdown','Menu turunan'],['Galeri','Daftar koleksi'],['Storytelling','Narasi digital']],faq:[['Perlu login?','Tidak.'],['Jelajah Desa hanya footer?','Tidak, ada di dropdown Tentang.']]});
+ return {m,body:b};
+}
+
+function vt(){
+ const m=meta('User Manual Virtual Tour 360','Pengunjung'); const b=front(m);
+ b.push(e.h(0,'Pendahuluan'), e.p('Panduan menggunakan Virtual Tour 360 berbasis Marzipano. Seluruh fitur tervalidasi: navbar, direct URL, viewer, drag, zoom, hotspot, fullscreen, tab baru, card informasi, rute tour, mobile responsive, dan gesture.'));
+ b.push(e.p('CATATAN: Tidak ada tombol zoom +/-. Zoom memakai scroll mouse atau pinch gesture.'));
+ b.push(...conventions(), ...requirements([['Browser','Chrome/Edge/Firefox/Safari terbaru'],['Koneksi','Internet stabil'],['Perangkat','Desktop untuk drag/scroll, HP untuk swipe/pinch']]));
+ b.push(e.h(0,'Panduan Operasional Virtual Tour'));
+ renderTasks(b,[
+  {title:'Akses dari Navbar',desc:'Membuka Virtual Tour dari menu.',screenshot:'vt_01_nav_access.png',steps:[['Klik Virtual Tour di navbar.','Halaman /virtual-tour terbuka.'],['Tunggu halaman termuat.','Viewer dan instruksi tampil.']]},
+  {title:'Akses Direct URL',desc:'Membuka langsung lewat URL.',screenshot:'vt_02_direct_url.png',steps:[['Buka /virtual-tour.','Halaman Virtual Tour tampil.'],['Pastikan title Virtual Tour 360° tampil.','Direct route valid.']]},
+  {title:'Viewer Tampil',desc:'Memastikan iframe Marzipano aktif.',screenshot:'vt_03_viewer.png',steps:[['Periksa area viewer.','Iframe tidak blank.'],['Pastikan path mengandung /marzipano/sitiwinangun/index.html.','Viewer Marzipano aktif.']]},
+  {title:'Drag Desktop',desc:'Mengubah arah pandang.',screenshot:'vt_04_drag_desktop.png',steps:[['Klik dan tahan panorama.','Input drag aktif.'],['Geser mouse.','Tampilan berubah.']]},
+  {title:'Zoom dengan Scroll',desc:'Zoom tanpa tombol +/-.',screenshot:'vt_05_zoom_in_scroll.png',steps:[['Arahkan kursor ke viewer.','Viewer siap.'],['Scroll mouse.','Zoom berubah.'],['Scroll arah sebaliknya.','Zoom out.']]},
+  {title:'Hotspot',desc:'Pindah titik panorama.',screenshot:'vt_06_zoom_out_scroll.png',steps:[['Cari ikon hotspot/panah.','Hotspot terlihat.'],['Klik hotspot.','Titik/lokasi berubah.']]},
+  {title:'Fullscreen',desc:'Layar penuh.',screenshot:'vt_07_tab_baru.png',steps:[['Klik Layar Penuh.','Mode fullscreen aktif.'],['Tekan Esc.','Kembali normal.']]},
+  {title:'Buka Tab Baru',desc:'Viewer standalone.',screenshot:'vt_07_tab_baru.png',steps:[['Klik Buka di tab baru ↗.','Tab baru /marzipano/sitiwinangun/index.html terbuka.']]},
+  {title:'Mobile Responsive',desc:'Cek tampilan HP.',screenshot:'vt_08_mobile_responsive.png',steps:[['Buka di viewport mobile.','Layout responsive tampil.'],['Swipe/pinch di perangkat fisik jika perlu.','Gesture mobile tervalidasi manual.']]},
+ ]);
+ finishCommon(b,{trouble:[['Viewer blank','File Marzipano/path salah','Cek public/marzipano/sitiwinangun'],['Zoom tidak jalan','Cari tombol +/-','Gunakan scroll/pinch'],['Fullscreen ditolak','Izin browser','Coba tab baru']],glossary:[['Marzipano','Viewer panorama'],['Hotspot','Titik interaktif'],['Pinch','Gesture dua jari']],faq:[['Perlu login?','Tidak.'],['Ada tombol +/-?','Tidak.'],['Jumlah titik?','31 titik panorama.']]});
+ return {m,body:b};
+}
+
+async function save(name, fn){ const {m,body}=fn(); const doc=e.assemble(m,body); const out=path.join(__dirname,'..','output',name+'.docx'); await e.save(doc,out); return out; }
+(async()=>{ for(const [n,f] of [['UserManual_Admin_Sitiwinangun_FINAL',admin],['UserManual_Storytelling_Sitiwinangun_FINAL',story],['UserManual_VirtualTour360_Sitiwinangun_FINAL',vt]]) console.log(await save(n,f)); })();
+
+
+
+
+

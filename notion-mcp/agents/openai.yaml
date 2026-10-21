@@ -1,0 +1,4 @@
+interface:
+  display_name: "Notion MCP"
+  short_description: "Notion API — search, read, write pages, query databases."
+  default_prompt: "Use notion-mcp for Notion API — search, read, write pages, query databases."

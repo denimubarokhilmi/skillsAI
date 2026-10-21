@@ -1,0 +1,4 @@
+interface:
+  display_name: "Markitdown"
+  short_description: "Convert files to markdown — Word, Excel, PDF, HTML."
+  default_prompt: "Use markitdown for Convert files to markdown — Word, Excel, PDF, HTML."

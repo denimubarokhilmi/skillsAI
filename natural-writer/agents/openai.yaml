@@ -1,0 +1,4 @@
+interface:
+  display_name: "Natural Writer"
+  short_description: "Avoid AI similarity detectors and humanize your text"
+  default_prompt: "Use $natural-writer to edit this text to make it read naturally like human writing and bypass AI similarity detectors."

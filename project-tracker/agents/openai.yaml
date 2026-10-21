@@ -1,0 +1,6 @@
+interface:
+  display_name: "project-tracker"
+  short_description: "Track active projects: portfolio, bug bounty, assist-core, hardware"
+  icon_small: ""
+  icon_large: ""
+  default_prompt: "Use project-tracker for Track active projects: portfolio, bug bounty, assist-core, hardware"

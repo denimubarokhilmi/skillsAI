@@ -1,0 +1,4 @@
+interface:
+  display_name: "iMessage"
+  short_description: "iMessage via iPhone bridge. PC Windows butuh Phone Link."
+  default_prompt: "Use imsg for iMessage via iPhone bridge. PC Windows butuh Phone Link."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "GitHub CLI"
+  short_description: "Full GitHub management via gh — repos, issues, PRs, releases."
+  default_prompt: "Use github-cli for Full GitHub management via gh — repos, issues, PRs, releases."

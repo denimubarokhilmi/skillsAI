@@ -1,0 +1,4 @@
+interface:
+  display_name: "API Client"
+  short_description: "API testing via curl. Test endpoint, format response, debug."
+  default_prompt: "Use api-client for API testing via curl. Test endpoint, format response, debug."

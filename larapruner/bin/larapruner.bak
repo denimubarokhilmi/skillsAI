@@ -1,0 +1,179 @@
+#!/usr/bin/env php
+<?php
+
+/**
+ * Larapruner — Dead code & unused dependency scanner for Laravel
+ * Zero external dependencies (no nikic/php-parser, no composer install needed)
+ *
+ * Usage:
+ *   larapruner                    # scan current directory
+ *   larapruner /path/to/project  # scan specific project
+ *   larapruner . --json           # JSON output
+ *   larapruner . --security       # security audit
+ *   larapruner . --refactor       # code smell detection
+ *   larapruner . --refactor --write  # auto-remove unused imports
+ *   larapruner --version
+ *   larapruner --help
+ */
+
+define('LARAPRUNER_VERSION', '1.0.0');
+define('LARAPRUNER_SRC', __DIR__ . '/../src');
+
+// Autoloader
+spl_autoload_register(function (string $class): void {
+    $class = str_replace('Larapruner\\', '', $class);
+    $file  = LARAPRUNER_SRC . '/' . $class . '.php';
+    if (file_exists($file)) require_once $file;
+});
+
+// ── Parse arguments ──────────────────────────────────────────────────────────
+
+$args       = array_slice($argv, 1);
+$projectPath = null;
+$jsonMode    = false;
+$secMode     = false;
+$refactorMode = false;
+$writeMode   = false;
+
+foreach ($args as $arg) {
+    if ($arg === '--json')     { $jsonMode     = true; continue; }
+    if ($arg === '--security') { $secMode      = true; continue; }
+    if ($arg === '--refactor') { $refactorMode = true; continue; }
+    if ($arg === '--write')    { $writeMode    = true; continue; }
+    if ($arg === '--version')  { echo "larapruner v" . LARAPRUNER_VERSION . "\n"; exit(0); }
+    if ($arg === '--help' || $arg === '-h') { showHelp(); exit(0); }
+    if (!str_starts_with($arg, '--')) {
+        $projectPath = rtrim(realpath($arg) ?: $arg, '/');
+    }
+}
+
+if ($projectPath === null) {
+    $projectPath = rtrim(getcwd(), '/');
+}
+
+// ── Validate project path ─────────────────────────────────────────────────────
+
+if (!is_dir($projectPath)) {
+    fwrite(STDERR, "Error: '$projectPath' is not a directory.\n");
+    exit(1);
+}
+
+if (!file_exists($projectPath . '/composer.json')) {
+    fwrite(STDERR, "Error: No composer.json found in '$projectPath'.\n");
+    fwrite(STDERR, "Make sure you're pointing to a Laravel project root.\n");
+    exit(1);
+}
+
+if (!is_dir($projectPath . '/app')) {
+    fwrite(STDERR, "Warning: No app/ directory found — results may be incomplete.\n");
+}
+
+// ── Run scans ─────────────────────────────────────────────────────────────────
+
+$results = [];
+$renderer = new Larapruner\Renderer();
+
+try {
+    // Class scan
+    $classScanner = new Larapruner\ClassScanner();
+    $unusedClasses = $classScanner->scan($projectPath);
+    $results['unused_classes'] = $unusedClasses;
+
+    // Composer scan
+    $composerScanner = new Larapruner\ComposerScanner();
+    $unusedDeps = $composerScanner->scan($projectPath);
+    $results['unused_composer_deps'] = $unusedDeps;
+
+    // Security audit
+    if ($secMode) {
+        $auditor = new Larapruner\SecurityAuditor();
+        $secIssues = $auditor->audit($projectPath);
+        $results['security'] = ['issues' => $secIssues];
+    }
+
+    // Test scan
+    if (\$testMode) {
+        \$testScanner = new Larapruner\TestScanner();
+        \$testResult = \$testScanner->scan(\$projectPath);
+        \$results[\"tests\"] = \$testResult;
+    }
+
+    // Refactor detection
+    if ($refactorMode) {
+        $detector = new Larapruner\RefactorDetector();
+        $smells = $detector->detect($projectPath);
+        $results['refactor'] = ['smells' => $smells];
+
+        // Write mode: auto-remove unused imports
+        if ($writeMode) {
+            $fixed = $detector->autoFix($projectPath);
+            $results['fixed_files'] = $fixed;
+        }
+    }
+
+    // Summary
+    $results['summary'] = [
+        'unused_classes'  => count($unusedClasses),
+        'unused_packages' => count($unusedDeps),
+    ];
+    if ($secMode) {
+        $results['summary']['security_issues'] = count($results['security']['issues']);
+    }
+    if ($refactorMode) {
+        $results['summary']['refactor_smells'] = count($results['refactor']['smells']);
+    }
+
+    // Output
+    if ($jsonMode) {
+        echo $renderer->renderJson($results) . "\n";
+    } else {
+        echo "\n";
+        echo "  Larapruner v" . LARAPRUNER_VERSION . "  —  $projectPath\n";
+        echo $renderer->renderHuman($results);
+    }
+
+    exit(0);
+
+} catch (\RuntimeException $e) {
+    fwrite(STDERR, "Error: " . $e->getMessage() . "\n");
+    exit(1);
+} catch (\Throwable $e) {
+    fwrite(STDERR, "Unexpected error: " . $e->getMessage() . "\n");
+    fwrite(STDERR, "  at " . $e->getFile() . ":" . $e->getLine() . "\n");
+    exit(2);
+}
+
+// ── Help ──────────────────────────────────────────────────────────────────────
+
+function showHelp(): void
+{
+    echo <<<HELP
+
+  Larapruner v1.0.0 — Dead code & dependency scanner for Laravel
+  ───────────────────────────────────────────────────────────────
+
+  Usage:
+    larapruner [path] [options]
+
+  Arguments:
+    path          Laravel project root (default: current directory)
+
+  Options:
+    --json        Output results as JSON
+    --security    Run security audit (.env, keys, outdated packages)
+    --refactor    Detect code smells (long methods, large classes, etc.)
+    --write       Auto-remove unused `use` imports (requires --refactor)
+    --version     Show version
+    --help        Show this help
+
+  Examples:
+    larapruner
+    larapruner /var/www/myapp
+    larapruner . --json
+    larapruner . --security --json
+    larapruner . --refactor
+    larapruner . --refactor --write
+    larapruner . --security --refactor --json
+
+HELP;
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Time Tracker"
+  short_description: "File-based time tracking. Catat mulai/selesai task."
+  default_prompt: "Use time-tracker for File-based time tracking. Catat mulai/selesai task."

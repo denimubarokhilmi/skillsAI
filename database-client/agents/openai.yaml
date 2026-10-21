@@ -1,0 +1,4 @@
+interface:
+  display_name: "Database Client"
+  short_description: "Query databases — SQLite, PostgreSQL. Skema, data, backup."
+  default_prompt: "Use database-client for Query databases — SQLite, PostgreSQL. Skema, data, backup."

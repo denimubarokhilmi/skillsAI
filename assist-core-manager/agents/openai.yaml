@@ -1,0 +1,6 @@
+interface:
+  display_name: "assist-core-manager"
+  short_description: "Auto-sync learning from conversations to Obsidian vault + GitHub"
+  icon_small: ""
+  icon_large: ""
+  default_prompt: "Use assist-core-manager for Auto-sync learning from conversations to Obsidian vault + GitHub"

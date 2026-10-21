@@ -1,0 +1,4 @@
+interface:
+  display_name: "Docker Manager"
+  short_description: "Run and manage local Docker containers for dev/test"
+  default_prompt: "Use docker-manager to run a local service or isolated dev/test environment in Docker."

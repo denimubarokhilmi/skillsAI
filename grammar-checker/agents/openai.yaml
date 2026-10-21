@@ -1,0 +1,4 @@
+interface:
+  display_name: "Grammar Checker"
+  short_description: "Grammar & spelling checker via LanguageTool API."
+  default_prompt: "Use grammar-checker for Grammar & spelling checker via LanguageTool API."

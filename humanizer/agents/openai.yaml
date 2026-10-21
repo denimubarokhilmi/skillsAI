@@ -1,0 +1,4 @@
+interface:
+  display_name: "Humanizer"
+  short_description: "Edit prose so it reads natural, varied, and less robotic"
+  default_prompt: "Use $humanizer to edit this text so it reads as natural, varied prose instead of stiff, formulaic writing."

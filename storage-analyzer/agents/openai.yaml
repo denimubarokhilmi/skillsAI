@@ -1,0 +1,4 @@
+interface:
+  display_name: "Storage Analyzer"
+  short_description: "Scan, find largest files/folders, clean up storage"
+  default_prompt: "Use storage-analyzer to scan disk usage, find the largest files/folders, and clean up temp/cache files."

@@ -1,0 +1,6 @@
+interface:
+  display_name: "lms-helper"
+  short_description: "Monitor LMS Tel-U courses, assignments, deadlines"
+  icon_small: ""
+  icon_large: ""
+  default_prompt: "Use lms-helper for Monitor LMS Tel-U courses, assignments, deadlines"
